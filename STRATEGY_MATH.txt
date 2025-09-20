@@ -1,0 +1,255 @@
+RACEMIND STRATEGY PREDICTION MATHEMATICS
+==========================================
+
+This document explains the mathematical models and algorithms used in RaceMind
+for predicting optimal F1 race strategies.
+
+OVERVIEW
+--------
+RaceMind uses a heuristic-based approach to find the minimum total race time
+by evaluating different pit stop strategies and tyre compound combinations.
+The system combines physics-based lap time modeling with optimization algorithms.
+
+CORE MATHEMATICAL MODELS
+========================
+
+1. LAP TIME MODELING
+--------------------
+Each lap time is calculated using a degradation model:
+
+Lap_Time(i) = Base_Lap_Time + (Degradation_Rate × Lap_Number) + Fuel_Penalty + Random_Variation
+
+Where:
+- Base_Lap_Time: Track-specific baseline lap time (seconds)
+- Degradation_Rate: Tyre compound-specific degradation (seconds/lap)
+- Lap_Number: Current lap number in the stint
+- Fuel_Penalty: Weight penalty from remaining fuel load
+- Random_Variation: ±1 second random variation for realism
+
+Fuel Penalty Calculation:
+Fuel_Penalty = (Remaining_Laps × Fuel_Penalty_Per_Lap)
+Where Fuel_Penalty_Per_Lap ≈ 0.015 seconds per lap
+
+2. TYRE DEGRADATION MODEL
+-------------------------
+Each tyre compound has distinct characteristics:
+
+SOFT:   Degradation = 0.120-0.140 seconds/lap
+MEDIUM: Degradation = 0.085-0.100 seconds/lap  
+HARD:   Degradation = 0.060-0.075 seconds/lap
+
+Degradation increases non-linearly as tyres approach their performance cliff.
+
+3. PIT STOP TIME LOSS
+---------------------
+Pit stop time loss varies by circuit:
+
+Pit_Loss = Base_Pit_Loss + (Pit_Lane_Length / Average_Speed)
+
+Typical values:
+- Monza: 22.5 seconds
+- Silverstone: 20.0 seconds
+- Spa: 21.5 seconds
+- Monaco: 18.5 seconds
+
+4. STINT TIME CALCULATION
+-------------------------
+For a stint of N laps with compound C:
+
+Stint_Time = Σ(i=1 to N) [Base_Time + (Deg_C × i) + Fuel_Penalty(i)]
+
+This can be approximated using arithmetic progression sums:
+
+Stint_Time = N × Base_Time + Deg_C × (N × (N+1)) / 2 + Fuel_Sum
+
+Where Fuel_Sum = Fuel_Penalty_Per_Lap × (N × (N-1)) / 2
+
+5. TOTAL RACE TIME
+------------------
+Total_Race_Time = Σ(All_Stint_Times) + Σ(Pit_Stop_Losses)
+
+Where Pit_Stop_Losses = Number_Of_Stops × Pit_Loss_Per_Stop
+
+OPTIMIZATION ALGORITHM
+======================
+
+1. CANDIDATE GENERATION
+-----------------------
+The algorithm generates realistic stint combinations:
+
+1-Stop Strategy: [Lap_1, Total_Laps - Lap_1]
+2-Stop Strategy: [Lap_1, Lap_2 - Lap_1, Total_Laps - Lap_2]
+3-Stop Strategy: [Lap_1, Lap_2 - Lap_1, Lap_3 - Lap_2, Total_Laps - Lap_3]
+
+Where Lap_i are constrained to realistic pit windows (every 15-30 laps).
+
+2. COMPOUND ASSIGNMENT
+----------------------
+For each stint combination, the algorithm tries all valid compound sequences:
+
+Valid sequences must use at least 2 different dry compounds (FIA rule).
+Example valid sequences:
+- [SOFT, MEDIUM, HARD]
+- [MEDIUM, HARD, SOFT]
+- [HARD, SOFT, MEDIUM]
+
+3. OPTIMIZATION CRITERIA
+------------------------
+The algorithm minimizes Total_Race_Time while considering:
+
+Primary: Minimize total race time
+Secondary: Prefer fewer pit stops (bias toward 1-2 stops)
+Tertiary: Prefer softer compounds early in race
+
+4. EARLY TERMINATION
+--------------------
+To improve performance, the algorithm uses early pruning:
+
+If (Current_Stops > Best_Stops + 1) AND (Time_Improvement < 5_seconds):
+    Skip remaining compound combinations
+
+This prevents exploring clearly suboptimal strategies.
+
+OPENF1 DATA INTEGRATION
+========================
+
+1. PIT LOSS CALIBRATION
+-----------------------
+When OpenF1 data is available, pit loss is calculated as:
+
+Pit_Loss = Max_Lap_Time - Median_Flying_Lap_Time
+
+Where:
+- Max_Lap_Time: Longest lap time (likely pit stop lap)
+- Median_Flying_Lap_Time: Median of normal racing laps
+- Clamped between 15-30 seconds for realism
+
+2. DEGRADATION CALIBRATION
+--------------------------
+Tyre degradation is estimated using linear regression:
+
+For each tyre compound, fit: Lap_Time = α + β × Lap_Number
+
+Where:
+- α = Base lap time
+- β = Degradation rate (seconds per lap)
+- Only use laps with sufficient data points (≥12 laps)
+
+3. FALLBACK MECHANISM
+---------------------
+When OpenF1 data is unavailable, the system uses:
+
+- Static track data from assets/data/tracks.json
+- Average values from known tracks
+- Realistic random generation for demonstration
+
+MATHEMATICAL CONSTRAINTS
+========================
+
+1. FIA RULES
+-----------
+- Minimum 2 different dry compounds per race
+- Wet weather tyres don't count toward compound requirement
+- Safety car periods don't affect strategy calculations
+
+2. PHYSICAL LIMITS
+------------------
+- Maximum stint length: 40 laps (tyre performance cliff)
+- Minimum stint length: 1 lap
+- Maximum pit stops: 4 (practical limit)
+- Lap time bounds: 60-200 seconds (realistic range)
+
+3. FUEL LOAD MODELING
+---------------------
+Fuel load decreases linearly throughout the race:
+Fuel_Load(lap) = Starting_Fuel - (Fuel_Consumption × lap)
+
+Fuel consumption typically 2-3 kg per lap, affecting lap times.
+
+PERFORMANCE OPTIMIZATIONS
+=========================
+
+1. CANDIDATE PRUNING
+--------------------
+- Skip unrealistic stint combinations
+- Early termination for poor strategies
+- Prioritize fewer stops over marginal time gains
+
+2. CACHING
+----------
+- Cache OpenF1 data per session
+- Reuse calculations for similar strategies
+- Store degradation coefficients per track/year
+
+3. PARALLEL PROCESSING
+----------------------
+- Evaluate multiple strategies simultaneously
+- Async data fetching from OpenF1
+- Non-blocking UI updates
+
+ACCURACY AND LIMITATIONS
+========================
+
+1. SIMPLIFICATIONS
+------------------
+- Linear degradation model (real degradation is non-linear)
+- Constant fuel consumption (varies with speed/conditions)
+- No safety car modeling
+- No weather effects on strategy
+- No competitor interaction
+
+2. REAL-WORLD FACTORS NOT MODELED
+---------------------------------
+- Safety car periods
+- Virtual safety car periods
+- Red flag periods
+- Weather changes
+- Driver skill differences
+- Car setup variations
+- Traffic effects
+- DRS usage patterns
+
+3. CONFIDENCE LEVELS
+--------------------
+- High confidence: 1-2 stop strategies on known tracks
+- Medium confidence: 3+ stop strategies
+- Low confidence: Wet weather or unusual circumstances
+
+FUTURE ENHANCEMENTS
+===================
+
+1. ADVANCED MODELING
+--------------------
+- Non-linear degradation curves
+- Weather-dependent parameters
+- Safety car probability modeling
+- Driver-specific performance factors
+
+2. MACHINE LEARNING
+-------------------
+- Historical strategy success rates
+- Pattern recognition in pit stop timing
+- Dynamic degradation prediction
+- Real-time strategy adjustments
+
+3. REAL-TIME INTEGRATION
+------------------------
+- Live race data feeds
+- Dynamic strategy updates
+- Competitor strategy analysis
+- Risk assessment modeling
+
+CONCLUSION
+==========
+
+RaceMind's strategy prediction system provides a solid foundation for F1 race
+strategy analysis using mathematically sound heuristics. While simplified compared
+to professional F1 strategy systems, it captures the essential trade-offs between
+tyre performance, pit stop costs, and race time optimization.
+
+The system is designed to be educational, transparent, and easily extensible
+for future enhancements in modeling complexity and data integration.
+
+---
+Generated by RaceMind Strategy Engine v1.0
+For technical questions, refer to the source code in StrategyEngine.ts

@@ -1,0 +1,53 @@
+{
+  "Monza": {
+    "laps": 53,
+    "pit_loss_seconds": 22.5,
+    "base_lap_time_seconds": 81.0,
+    "degradation_per_lap_seconds": {
+      "SOFT": 0.120,
+      "MEDIUM": 0.085,
+      "HARD": 0.060
+    }
+  },
+  "Silverstone": {
+    "laps": 52,
+    "pit_loss_seconds": 20.0,
+    "base_lap_time_seconds": 87.5,
+    "degradation_per_lap_seconds": {
+      "SOFT": 0.140,
+      "MEDIUM": 0.095,
+      "HARD": 0.070
+    }
+  },
+  "Spa": {
+    "laps": 44,
+    "pit_loss_seconds": 21.5,
+    "base_lap_time_seconds": 103.0,
+    "degradation_per_lap_seconds": {
+      "SOFT": 0.135,
+      "MEDIUM": 0.100,
+      "HARD": 0.075
+    }
+  },
+  "Suzuka": {
+    "laps": 53,
+    "pit_loss_seconds": 19.0,
+    "base_lap_time_seconds": 91.5,
+    "degradation_per_lap_seconds": {
+      "SOFT": 0.130,
+      "MEDIUM": 0.095,
+      "HARD": 0.072
+    }
+  },
+  "Monaco": {
+    "laps": 78,
+    "pit_loss_seconds": 18.5,
+    "base_lap_time_seconds": 73.0,
+    "degradation_per_lap_seconds": {
+      "SOFT": 0.090,
+      "MEDIUM": 0.065,
+      "HARD": 0.050
+    }
+  }
+}
+
